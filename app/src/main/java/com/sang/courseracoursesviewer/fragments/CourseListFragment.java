@@ -46,7 +46,6 @@ public class CourseListFragment extends Fragment { // Fragment of all courses
         this.mAsyncTask = new FetchDataTask(0).execute();
     }
 
-
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
