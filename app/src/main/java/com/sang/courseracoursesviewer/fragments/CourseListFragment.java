@@ -8,12 +8,9 @@ import android.support.v4.app.Fragment;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.SearchView;
 import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
+
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -37,7 +34,7 @@ public class CourseListFragment extends Fragment { // Fragment of all courses
     private static final String TAG = "CourseListFragment";
     private List<Data> mFetchedDataList = new ArrayList<>();
     private boolean firstTimeFetch = true; // check if it's first time fetch data or not
-
+    private AsyncTask mAsyncTask;
     public static CourseListFragment newInstance() {
         return new CourseListFragment();
     }
@@ -46,8 +43,9 @@ public class CourseListFragment extends Fragment { // Fragment of all courses
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
-        new FetchDataTask().execute(0);
+        this.mAsyncTask = new FetchDataTask(0).execute();
     }
+
 
     @Nullable
     @Override
@@ -58,13 +56,14 @@ public class CourseListFragment extends Fragment { // Fragment of all courses
         mRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
-                if (!recyclerView.canScrollVertically(1)) { // cant scroll down anymore
-                    onScrolledToBottom(); // load more
+
+                if (!recyclerView.canScrollVertically(1) && (mAsyncTask.getStatus() == AsyncTask.Status.FINISHED)) { // cant scroll down anymore
+                    onScrolledToBottom(recyclerView.getAdapter().getItemCount()); // load more
                 }
             }
 
-            public void onScrolledToBottom() {
-                new FetchDataTask().execute(mRecyclerView.getAdapter().getItemCount()); // load more from last position in adapter
+            public void onScrolledToBottom(int lastPosition) {
+                mAsyncTask = new FetchDataTask(lastPosition).execute(); // load more from last position in adapter
                 Toast.makeText(getActivity(), "Loading next page....", Toast.LENGTH_SHORT).show();
             }
 
@@ -120,10 +119,6 @@ public class CourseListFragment extends Fragment { // Fragment of all courses
     public class CourseAdapter extends RecyclerView.Adapter<CourseHolder> {
         private List<Data> mDataList;
 
-        public List<Data> getDataList() {
-            return mDataList;
-        }
-
 
         public CourseAdapter(List<Data> list) {
             this.mDataList = list;
@@ -150,15 +145,17 @@ public class CourseListFragment extends Fragment { // Fragment of all courses
         }
     }
 
-    private class FetchDataTask extends AsyncTask<Integer, Void, List<Data>> {
-
-        @Override
-        protected List<Data> doInBackground(Integer... params) {
-            Log.i(TAG, "Fetched 25 course from position " + params[0]);
-            return new FetchData().fetchDatas(params[0]);
-            // fetch more data from last position
+    private class FetchDataTask extends AsyncTask<Void, Void, List<Data>> {
+        private int lastPosition;
+        public FetchDataTask(int position){
+            this.lastPosition = position;
         }
 
+        @Override
+        protected List<Data> doInBackground(Void... params) {
+            Log.i(TAG, "Fetched 25 course from position " + lastPosition);
+            return new FetchData().fetchDatas(lastPosition);
+        }
 
         @Override
         protected void onPostExecute(List<Data> datas) {
